@@ -2,12 +2,25 @@
 
 import { useEffect, useRef, useState } from "react";
 import Mark from "@/components/Mark";
-import { useShow } from "@/components/use-show";
+import Live from "@/components/Live";
+import YouTube from "@/components/YouTube";
+import { boothHeaders, useShow } from "@/components/use-show";
+import { money } from "@/lib/money";
+import { clashNote } from "@/lib/song";
 import type { Accent, Position, Track } from "@/lib/types";
 
+type Check = {
+  status: "checking" | "match" | "none" | "error";
+  title?: string;
+  artist?: string;
+  artUrl?: string | null;
+  message?: string;
+};
+
 export default function Booth() {
-  const { show, error, setError, send } = useShow();
+  const { show, error, setError, send, closed } = useShow();
   const [copied, setCopied] = useState<string | null>(null);
+  const [checks, setChecks] = useState<Record<string, Check>>({});
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const [requester, setRequester] = useState("");
@@ -15,11 +28,20 @@ export default function Booth() {
   const [spotify, setSpotify] = useState("");
   const [looking, setLooking] = useState(false);
   const [venue, setVenue] = useState("Setlist");
+  const [refused, setRefused] = useState("");
+  const [phonePassword, setPhonePassword] = useState("");
+  const [ending, setEnding] = useState(false);
   const venueFocused = useRef(false);
+  const refusedFocused = useRef(false);
 
   useEffect(() => {
     if (!show || venueFocused.current) return;
     setVenue(show.settings.venueName);
+  }, [show]);
+
+  useEffect(() => {
+    if (!show || refusedFocused.current) return;
+    setRefused(show.settings.refusedWords ?? "");
   }, [show]);
 
   useEffect(() => {
@@ -34,10 +56,52 @@ export default function Booth() {
     return () => window.removeEventListener("keydown", onKey);
   }, [send, setError]);
 
-  async function copy(kind: string, path: string) {
-    await navigator.clipboard.writeText(`${window.location.origin}${path}`);
+  useEffect(() => {
+    void fetch("/api/session", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { phonePassword?: string } | null) => {
+        if (data?.phonePassword) setPhonePassword(data.phonePassword);
+      })
+      .catch(() => undefined);
+  }, []);
+
+  async function copy(kind: "overlay" | "request" | "phone") {
+    const url = show?.links[kind];
+    if (!url) {
+      setError("This Mac has no network address yet, so phones cannot open that link.");
+      return;
+    }
+    await navigator.clipboard.writeText(url);
     setCopied(kind);
     window.setTimeout(() => setCopied(null), 1400);
+  }
+
+  async function rotatePassword() {
+    try {
+      const response = await fetch("/api/session", {
+        method: "POST",
+        headers: boothHeaders(),
+        body: JSON.stringify({ action: "rotate-password" }),
+      });
+      const data = (await response.json()) as { phonePassword?: string; error?: string };
+      if (!response.ok) throw new Error(data.error || "Could not change the password.");
+      if (data.phonePassword) setPhonePassword(data.phonePassword);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not change the password.");
+    }
+  }
+
+  async function uploadLogo(file: File | undefined) {
+    if (!file) return;
+    const body = new FormData();
+    body.set("logo", file);
+    try {
+      const response = await fetch("/api/logo", { method: "POST", headers: boothHeaders(false), body });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error || "Could not save that logo.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not save that logo.");
+    }
   }
 
   async function lookup() {
@@ -46,7 +110,7 @@ export default function Booth() {
     try {
       const response = await fetch("/api/lookup", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: boothHeaders(),
         body: JSON.stringify({ url: spotify }),
       });
       const data = (await response.json()) as { title?: string; artist?: string; artUrl?: string | null; error?: string };
@@ -81,12 +145,52 @@ export default function Booth() {
     }
   }
 
+  async function checkTrack(track: Track) {
+    setChecks((current) => ({ ...current, [track.id]: { status: "checking" } }));
+    setError(null);
+    try {
+      const response = await fetch("/api/lookup", {
+        method: "POST",
+        headers: boothHeaders(),
+        body: JSON.stringify({ title: track.title, artist: track.artist }),
+      });
+      const data = (await response.json()) as {
+        error?: string;
+        match?: { title: string; artist: string; artUrl: string | null } | null;
+      };
+      if (!response.ok) throw new Error(data.error || "Could not check that song.");
+      if (!data.match) {
+        setChecks((current) => ({ ...current, [track.id]: { status: "none" } }));
+        return;
+      }
+      setChecks((current) => ({
+        ...current,
+        [track.id]: { status: "match", title: data.match?.title, artist: data.match?.artist, artUrl: data.match?.artUrl },
+      }));
+    } catch (reason) {
+      setChecks((current) => ({
+        ...current,
+        [track.id]: { status: "error", message: reason instanceof Error ? reason.message : "Could not check that song." },
+      }));
+    }
+  }
+
   async function act(body: Record<string, unknown>) {
     try {
       await send(body);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not update the set.");
     }
+  }
+
+  if (closed) {
+    return (
+      <main className="booth">
+        <p className="booting">
+          The booth is locked. <a href="/login">Open it</a>
+        </p>
+      </main>
+    );
   }
 
   if (!show) {
@@ -107,20 +211,45 @@ export default function Booth() {
           <h1>The booth</h1>
         </div>
         <div className="links">
-          <button type="button" className="btn" onClick={() => copy("overlay", "/overlay")}>
+          <button type="button" className="btn" onClick={() => void copy("overlay")}>
             {copied === "overlay" ? "Copied" : "Copy overlay link"}
           </button>
-          <button type="button" className="btn" onClick={() => copy("request", "/request")}>
+          <button type="button" className="btn" onClick={() => void copy("request")} disabled={!show.links.request}>
             {copied === "request" ? "Copied" : "Copy request link"}
           </button>
+          <button type="button" className="btn" onClick={() => void copy("phone")} disabled={!show.links.phone}>
+            {copied === "phone" ? "Copied" : "Copy phone booth"}
+          </button>
+          <a className="btn" href="/history">
+            Past nights
+          </a>
         </div>
       </header>
+      <p className="hint request-hint">
+        {show.links.request
+          ? `Requests: ${show.links.request}`
+          : "This Mac has no network address yet, so phones cannot open requests."}
+      </p>
+      {show.links.phone ? (
+        <p className="hint request-hint">
+          Phone booth: {show.links.phone}
+          {phonePassword ? ` · password ${phonePassword}` : ""}
+          {phonePassword ? (
+            <button type="button" className="btn tiny" onClick={() => void rotatePassword()}>
+              New password
+            </button>
+          ) : null}
+        </p>
+      ) : null}
+
+      <YouTube />
+      <Live />
 
       <div className="desk">
         <section className="stage-column">
           <div className="monitor">
             <div className={`anchor ${show.settings.position}`}>
-              <Mark show={show} />
+              <Mark show={{ ...show, logoUrl: show.logoStamp ? `/api/logo?v=${show.logoStamp}` : null }} />
             </div>
             {!show.nowPlaying ? <p className="stage-idle">Clear until a song takes the stage.</p> : null}
           </div>
@@ -139,6 +268,7 @@ export default function Booth() {
               <h3>{show.nowPlaying.title}</h3>
               <p className="artist">{show.nowPlaying.artist}</p>
               <p className="for">for {show.nowPlaying.requester}</p>
+              {show.nowPlaying.tipCents > 0 ? <p className="for">{money(show.nowPlaying.tipCents)} tip</p> : null}
               <button type="button" className="btn primary next" onClick={() => void act({ action: "next" })}>
                 Next
               </button>
@@ -162,8 +292,8 @@ export default function Booth() {
       </div>
 
       <p className="hint">
-        In OBS, add a Browser Source at 1920×1080 and paste the overlay link. Play the audio in Spotify or
-        your DJ software. Setlist only puts the song on screen. Press N for the next track.
+        Paste the overlay link into one OBS browser source at 1920×1080. The name, colors, and logo stay on this booth
+        for the next gig. Play the audio in Serato or Spotify. Press N for the next track.
       </p>
 
       <form
@@ -220,19 +350,62 @@ export default function Booth() {
 
       <div className="lanes">
         <Lane title="Requests" count={show.pending.length} empty="Nothing waiting.">
-          {show.pending.map((track) => (
-            <TrackRow key={track.id} track={track}>
-              <button type="button" className="btn tiny primary" onClick={() => void act({ action: "approve", id: track.id })}>
-                Queue
-              </button>
-              <button type="button" className="btn tiny" onClick={() => void act({ action: "play", id: track.id })}>
-                Play
-              </button>
-              <button type="button" className="btn tiny quiet" onClick={() => void act({ action: "pass", id: track.id })}>
-                Pass
-              </button>
-            </TrackRow>
-          ))}
+          {show.pending.map((track) => {
+            const flag = clashNote(show, track);
+            const check = checks[track.id];
+            return (
+              <TrackRow
+                key={track.id}
+                track={track}
+                note={
+                  <>
+                    {flag ? <p className="flag">{flag}</p> : null}
+                    {check?.status === "checking" ? <p className="check-note">Checking…</p> : null}
+                    {check?.status === "none" ? <p className="check-note">No released match.</p> : null}
+                    {check?.status === "error" ? <p className="flag">{check.message}</p> : null}
+                    {check?.status === "match" ? (
+                      <div className="check-note">
+                        <p>
+                          Released as {check.title} — {check.artist}
+                        </p>
+                        <button
+                          type="button"
+                          className="btn tiny"
+                          onClick={() =>
+                            void act({
+                              action: "revise",
+                              id: track.id,
+                              title: check.title,
+                              artist: check.artist,
+                              artUrl: check.artUrl,
+                            })
+                          }
+                        >
+                          Use this
+                        </button>
+                      </div>
+                    ) : null}
+                  </>
+                }
+              >
+                <button type="button" className="btn tiny" onClick={() => void checkTrack(track)} disabled={check?.status === "checking"}>
+                  Check
+                </button>
+                <button type="button" className="btn tiny primary" onClick={() => void act({ action: "approve", id: track.id })}>
+                  Queue
+                </button>
+                <button type="button" className="btn tiny" onClick={() => void act({ action: "play", id: track.id })}>
+                  Play
+                </button>
+                <button type="button" className="btn tiny quiet" onClick={() => void act({ action: "pass", id: track.id })}>
+                  Pass
+                </button>
+                <button type="button" className="btn tiny quiet" onClick={() => void act({ action: "block", id: track.id })}>
+                  Block
+                </button>
+              </TrackRow>
+            );
+          })}
         </Lane>
         <Lane title="Queue" count={show.queue.length} empty="The set is open.">
           {show.queue.map((track, index) => (
@@ -254,6 +427,9 @@ export default function Booth() {
               <button type="button" className="btn tiny quiet" onClick={() => void act({ action: "remove", id: track.id })}>
                 Remove
               </button>
+              <button type="button" className="btn tiny quiet" onClick={() => void act({ action: "block", id: track.id })}>
+                Block
+              </button>
             </TrackRow>
           ))}
         </Lane>
@@ -268,7 +444,7 @@ export default function Booth() {
         className="settings"
         onSubmit={(event) => {
           event.preventDefault();
-          void act({ action: "settings", ...show.settings, venueName: venue });
+          void act({ action: "settings", ...show.settings, venueName: venue, refusedWords: refused });
         }}
       >
         <label>
@@ -326,6 +502,75 @@ export default function Booth() {
           />
           Show up next
         </label>
+        <label>
+          <span>Also refuse</span>
+          <input
+            value={refused}
+            maxLength={200}
+            placeholder="Words, separated by commas"
+            onFocus={() => {
+              refusedFocused.current = true;
+            }}
+            onBlur={() => {
+              refusedFocused.current = false;
+              void act({ action: "settings", ...show.settings, refusedWords: refused });
+            }}
+            onChange={(event) => setRefused(event.target.value)}
+          />
+        </label>
+        <label>
+          <span>Logo</span>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              void uploadLogo(file);
+            }}
+          />
+        </label>
+        {show.logoStamp ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="logo-preview" src={`/api/logo?v=${show.logoStamp}`} alt="" />
+        ) : null}
+        <p className="hint">
+          {show.tips
+            ? "Tips are connected. A tipped song waits on you, then moves ahead of songs with a smaller tip."
+            : "Tips need STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET on the server."}
+          {show.links.request ? ` Webhook ${new URL(show.links.request).origin}/api/stripe/webhook` : ""}
+        </p>
+        {(show.blocked ?? []).length > 0 ? (
+          <div className="blocked">
+            <span>Blocked</span>
+            {(show.blocked ?? []).map((person) => (
+              <button
+                key={`${person.name}-${person.fbId ?? ""}-${person.ytId ?? ""}`}
+                type="button"
+                className="btn tiny"
+                onClick={() => void act({ action: "unblock", name: person.name })}
+              >
+                {person.name}
+                {person.fbId ? " · Facebook" : ""}
+                {person.ytId ? " · YouTube" : ""} · Unblock
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            if (!ending) {
+              setEnding(true);
+              return;
+            }
+            setEnding(false);
+            void act({ action: "end-night" });
+          }}
+        >
+          {ending ? "Save the night and clear the set" : "End night"}
+        </button>
       </form>
     </main>
   );
@@ -356,10 +601,12 @@ function Lane({
 function TrackRow({
   track,
   index,
+  note,
   children,
 }: {
   track: Track;
   index?: number;
+  note?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   return (
@@ -370,7 +617,11 @@ function TrackRow({
         <p>
           {track.artist}
           <em> · {track.requester}</em>
+          {track.source === "facebook" ? <em> · Facebook</em> : null}
+          {track.source === "youtube" ? <em> · YouTube</em> : null}
+          {track.tipCents > 0 ? <em> · {money(track.tipCents)} tip</em> : null}
         </p>
+        {note}
       </div>
       {children ? <div className="row-actions">{children}</div> : null}
     </article>

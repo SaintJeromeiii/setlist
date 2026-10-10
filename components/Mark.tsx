@@ -1,4 +1,15 @@
-import type { PublicShow } from "@/lib/types";
+type MarkShow = {
+  settings: { showRequester: boolean; showUpNext: boolean };
+  logoUrl?: string | null;
+  nowPlaying: {
+    id: string;
+    title: string;
+    artist: string;
+    requester: string;
+    artUrl: string | null;
+  } | null;
+  upNext: { title: string; artist: string } | null;
+};
 
 function hue(seed: string): number {
   let hash = 0;
@@ -12,7 +23,7 @@ function monogram(title: string): string {
   return letters.toUpperCase() || "•";
 }
 
-export default function Mark({ show }: { show: PublicShow }) {
+export default function Mark({ show }: { show: MarkShow }) {
   const track = show.nowPlaying;
   if (!track) return null;
   const next = show.settings.showUpNext ? show.upNext : null;
@@ -41,6 +52,11 @@ export default function Mark({ show }: { show: PublicShow }) {
         </div>
       </div>
       <div className="mark-copy">
+        {show.logoUrl ? (
+          // The venue logo is served by this booth.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="venue-logo" src={show.logoUrl} alt="" />
+        ) : null}
         <p className="eyebrow">
           <span className="live-dot" aria-hidden />
           Now playing

@@ -337,7 +337,7 @@ button { cursor: pointer; }
   max-width: 68ch;
 }
 
-.adder, .stage-card, .lane, .settings, .request-card {
+.adder, .stage-card, .lane, .settings, .request-card, .live-panel, .night, .phone-stage, .phone-card {
   background: rgba(255, 250, 242, 0.03);
   border: 1px solid var(--line);
 }
@@ -352,9 +352,9 @@ button { cursor: pointer; }
 
 .fields { margin-top: 12px; }
 
-.adder label, .settings label, .request-card label { flex: 1; display: grid; gap: 6px; }
+.adder label, .settings label, .request-card label, .live-panel label { flex: 1; display: grid; gap: 6px; }
 
-.adder label span, .settings label span, .request-card label span, .settings legend {
+.adder label span, .settings label span, .request-card label span, .live-panel label span, .settings legend {
   font-size: 11px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -540,6 +540,15 @@ input:focus { outline: none; border-bottom-color: var(--accent); }
 
 .check input { width: auto; border: 0; accent-color: var(--accent); }
 
+.blocked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
 .overlay-root { min-height: 100vh; position: relative; }
 
 .request-page {
@@ -553,7 +562,7 @@ input:focus { outline: none; border-bottom-color: var(--accent); }
 }
 
 .request-card {
-  width: min(460px, 100%);
+  width: min(520px, 100%);
   padding: 28px 24px 22px;
   display: grid;
   gap: 14px;
@@ -561,9 +570,125 @@ input:focus { outline: none; border-bottom-color: var(--accent); }
 
 .request-card h1 { font-size: 40px; }
 
+.request-hint { margin: -12px 0 22px; }
+
+.flag, .check-note { margin: 6px 0 0; font-size: 13px; line-height: 1.4; }
+
+.flag { color: #e7b2a6; }
+
+.check-note { color: var(--muted); }
+
+.check-note p { margin: 0 0 6px; color: var(--accent); font-size: 13px; }
+
 .lede, .sent { margin: 0; color: var(--muted); line-height: 1.5; }
 
 .sent { color: var(--ink); }
+
+.request-list h2 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.request-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.request-list li {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: rgba(246, 241, 232, 0.03);
+}
+
+.request-list .song {
+  margin: 0;
+  color: var(--ink);
+}
+
+.request-list .song span {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.request-list .state {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.request-list li[data-status="queued"] .state,
+.request-list li[data-status="playing"] .state {
+  color: var(--accent);
+}
+
+.request-list li[data-status="passed"] .state,
+.request-list li[data-status="removed"] .state {
+  color: #e7b2a6;
+}
+
+.status-link {
+  display: inline-block;
+  margin-top: 6px;
+  color: var(--faint);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.status-link:hover { color: var(--accent); }
+
+.board {
+  display: grid;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: rgba(246, 241, 232, 0.03);
+}
+
+.board h2 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.board .now, .board .quiet { margin: 0; line-height: 1.4; }
+
+.board .now span, .board .quiet { color: var(--muted); }
+
+.board .now span { display: block; margin-top: 2px; font-size: 14px; }
+
+.board ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+
+.board li { display: grid; grid-template-columns: auto 1fr; gap: 8px; }
+
+.board li span {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+}
+
+.board li p { margin: 0; color: var(--ink); }
+
+.board li em {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-style: normal;
+  font-size: 14px;
+}
 
 .request-card .btn { margin-top: 6px; }
 
@@ -574,3 +699,119 @@ input:focus { outline: none; border-bottom-color: var(--accent); }
   .spotify-row, .adder-actions, .settings { align-items: stretch; }
   .top h1 { font-size: 34px; }
 }
+
+a.btn {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.request-hint .btn { margin-left: 10px; }
+
+.venue-logo {
+  display: block;
+  height: 36px;
+  width: auto;
+  max-width: 160px;
+  margin: 0 0 10px;
+  object-fit: contain;
+}
+
+.logo-preview {
+  height: 48px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.live-panel, .night, .phone-stage, .phone-card { padding: 16px; }
+
+.live-panel { margin: 18px 0 22px; }
+
+.live-actions, .tip-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.tip-picks { margin-top: 8px; }
+
+.btn.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: transparent;
+}
+
+.phone {
+  min-height: 100vh;
+  padding: 20px 16px 112px;
+  background:
+    radial-gradient(900px 420px at 0% -10%, rgba(226, 168, 90, 0.09), transparent 55%),
+    var(--bg);
+}
+
+.phone-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.phone-links { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+.phone h1 {
+  margin: 0;
+  font-family: var(--font-serif), Georgia, serif;
+  font-weight: 460;
+  font-size: 36px;
+  letter-spacing: -0.03em;
+  font-variation-settings: "SOFT" 40, "WONK" 1, "opsz" 72;
+}
+
+.phone-stage h2, .phone-card h3 {
+  margin: 6px 0 4px;
+  font-family: var(--font-serif), Georgia, serif;
+  font-weight: 500;
+}
+
+.phone-stage p, .phone-card p { margin: 0; color: var(--muted); }
+
+.phone-who { margin-top: 4px !important; }
+
+.phone-card { margin-bottom: 12px; }
+
+.phone-actions {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.phone-actions .btn { min-height: 48px; }
+
+.phone-queue { margin-top: 10px !important; }
+
+.phone-next {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  min-height: 56px;
+  font-size: 18px;
+}
+
+.night { margin-bottom: 16px; }
+
+.night ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+
+.night li { display: grid; gap: 2px; }
+
+.night li span { color: var(--muted); font-size: 14px; }
+
+.request-card .quiet { color: var(--muted); margin: 8px 0 0; }
+
+.history a, .booting a { color: var(--accent); }
+

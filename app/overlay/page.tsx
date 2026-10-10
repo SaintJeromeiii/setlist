@@ -1,15 +1,32 @@
 "use client";
 
 import Mark from "@/components/Mark";
-import { useShow } from "@/components/use-show";
+import { useBoard } from "@/components/use-show";
 
 export default function OverlayPage() {
-  const { show } = useShow();
-  if (!show) return <div className="overlay-root" />;
+  const board = useBoard();
+  if (!board) return <div className="overlay-root" />;
+  const now = board.nowPlaying;
+  const next = board.upNext;
   return (
-    <div className="overlay-root" data-accent={show.settings.accent}>
-      <div className={`anchor ${show.settings.position}`}>
-        <Mark show={show} />
+    <div className="overlay-root" data-accent={board.accent}>
+      <div className={`anchor ${board.position}`}>
+        <Mark
+          show={{
+            settings: { showRequester: board.showRequester, showUpNext: board.showUpNext },
+            nowPlaying: now
+              ? {
+                  id: `${now.title}\n${now.artist}`,
+                  title: now.title,
+                  artist: now.artist,
+                  requester: now.requester ?? "",
+                  artUrl: now.artUrl,
+                }
+              : null,
+            upNext: next,
+            logoUrl: board.logoStamp ? `/api/logo?v=${board.logoStamp}` : null,
+          }}
+        />
       </div>
     </div>
   );
