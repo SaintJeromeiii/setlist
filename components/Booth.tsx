@@ -274,9 +274,8 @@ export default function Booth() {
               <h2>Another computer</h2>
             </div>
             <p className="hint">
-              Another streamer runs Setlist on their own computer. Their YouTube key, blocks, and nights stay on that
-              machine. They open Setup, paste their own key, and build the same OBS scene: webcam underneath, overlay
-              on top.
+              Another streamer runs Setlist on their own computer. Their blocks and nights stay on that machine.
+              They open Setup, paste the live URL, and build the same OBS scene: webcam underneath, overlay on top.
             </p>
           </section>
 
