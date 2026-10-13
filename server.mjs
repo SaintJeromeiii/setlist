@@ -5,6 +5,7 @@ import next from "next";
 const dev = process.env.NODE_ENV !== "production";
 const boothPort = Number(process.env.PORT || 3847);
 const publicPort = Number(process.env.SETLIST_PUBLIC_PORT || 3848);
+const boothHost = process.env.SETLIST_BOOTH_HOST || "127.0.0.1";
 
 const booth = createServer();
 const app = next({
@@ -45,7 +46,7 @@ booth.on("request", peer("booth"));
 const publicServer = createServer(peer("public"));
 
 await new Promise((resolve) => {
-  booth.listen(boothPort, "127.0.0.1", resolve);
+  booth.listen(boothPort, boothHost, resolve);
 });
 await new Promise((resolve) => {
   publicServer.listen(publicPort, "0.0.0.0", resolve);
