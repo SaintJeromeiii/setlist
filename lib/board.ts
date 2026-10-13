@@ -14,6 +14,7 @@ export type Board = {
   venueName: string;
   accent: Settings["accent"];
   position: Settings["position"];
+  skin: Settings["skin"];
   showRequester: boolean;
   showUpNext: boolean;
   nowPlaying: BoardTrack | null;
@@ -40,6 +41,7 @@ export function board(show: Show): Board {
     venueName: seen.settings.venueName,
     accent: seen.settings.accent,
     position: seen.settings.position,
+    skin: seen.settings.skin,
     showRequester,
     showUpNext: seen.settings.showUpNext,
     nowPlaying: card(seen.nowPlaying, showRequester),

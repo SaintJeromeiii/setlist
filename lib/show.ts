@@ -1,7 +1,7 @@
 import { refusesLanguage } from "./language";
 import { takeListenerTurn } from "./limit";
 import { nameKey, songKey } from "./song";
-import type { Settings, Show, Track } from "./types";
+import type { Settings, Show, Skin, Track } from "./types";
 
 const LIMITS = { title: 80, artist: 80, requester: 40, venue: 40, refused: 200 };
 
@@ -358,12 +358,14 @@ export function updateSettings(show: Show, patch: Partial<Settings>): Show {
     patch.position === "center" || patch.position === "right" || patch.position === "left"
       ? patch.position
       : show.settings.position;
+  const skin: Skin = patch.skin === "paper" || patch.skin === "club" || patch.skin === "warm" ? patch.skin : show.settings.skin;
   return {
     ...show,
     settings: {
       venueName,
       accent,
       position,
+      skin,
       showRequester: patch.showRequester ?? show.settings.showRequester,
       showUpNext: patch.showUpNext ?? show.settings.showUpNext,
       refusedWords: cleanText(patch.refusedWords ?? show.settings.refusedWords ?? "", LIMITS.refused),

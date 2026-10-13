@@ -79,6 +79,23 @@ export default function PhoneBooth() {
           </p>
         ) : null}
       </section>
+      {(show.blocked ?? []).length > 0 ? (
+        <div className="blocked">
+          <span>Blocked</span>
+          {(show.blocked ?? []).map((person) => (
+            <button
+              key={`${person.name}-${person.ytId ?? ""}-${person.fbId ?? ""}`}
+              type="button"
+              className="btn tiny"
+              onClick={() => void act({ action: "unblock", name: person.name })}
+            >
+              {person.name}
+              {person.ytId ? " · YouTube" : ""}
+              {person.fbId ? " · Facebook" : ""} · Unblock
+            </button>
+          ))}
+        </div>
+      ) : null}
       {error ? <p className="banner">{error}</p> : null}
       <section>
         <div className="panel-head">

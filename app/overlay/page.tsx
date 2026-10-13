@@ -9,7 +9,7 @@ export default function OverlayPage() {
   const now = board.nowPlaying;
   const next = board.upNext;
   return (
-    <div className="overlay-root" data-accent={board.accent}>
+    <div className="overlay-root" data-accent={board.accent} data-skin={board.skin}>
       <div className={`anchor ${board.position}`}>
         <Mark
           show={{

@@ -815,3 +815,68 @@ a.btn {
 
 .history a, .booting a { color: var(--accent); }
 
+.gig-stage { margin-top: 18px; }
+
+.gig-stage .next {
+  min-height: 56px;
+  padding: 14px 28px;
+  font-size: 18px;
+}
+
+.booth > .monitor { margin-top: 18px; }
+
+.gig-stage + .blocked { margin-top: 14px; }
+
+.overlay-root[data-skin="paper"] .anchor,
+.monitor[data-skin="paper"] .anchor,
+.overlay-root[data-skin="paper"] .anchor.left,
+.overlay-root[data-skin="paper"] .anchor.right,
+.overlay-root[data-skin="paper"] .anchor.center,
+.monitor[data-skin="paper"] .anchor.left,
+.monitor[data-skin="paper"] .anchor.right,
+.monitor[data-skin="paper"] .anchor.center {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+  transform: none;
+}
+
+.overlay-root[data-skin="paper"],
+.monitor[data-skin="paper"] {
+  --ink: #1c1612;
+  --muted: #5e564e;
+  --faint: #6f675f;
+  --line: rgba(28, 22, 18, 0.14);
+}
+
+.overlay-root[data-skin="paper"] .mark,
+.monitor[data-skin="paper"] .mark {
+  width: 100%;
+  background: #f4efe6;
+  color: #1c1612;
+  border: 0;
+  border-top: 4px solid var(--accent);
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.28);
+}
+
+.overlay-root[data-skin="paper"] .mark::before,
+.monitor[data-skin="paper"] .mark::before,
+.overlay-root[data-skin="club"] .mark::before,
+.monitor[data-skin="club"] .mark::before {
+  display: none;
+}
+
+.overlay-root[data-skin="club"] .mark,
+.monitor[data-skin="club"] .mark {
+  background: #070708;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 3px solid var(--accent);
+  box-shadow: none;
+}
+
+.overlay-root[data-skin="club"] .art,
+.monitor[data-skin="club"] .art {
+  background: #101012;
+}
+

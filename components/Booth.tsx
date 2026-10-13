@@ -7,7 +7,7 @@ import YouTube from "@/components/YouTube";
 import { boothHeaders, useShow } from "@/components/use-show";
 import { money } from "@/lib/money";
 import { clashNote } from "@/lib/song";
-import type { Accent, Position, Track } from "@/lib/types";
+import type { Accent, Position, Skin, Track } from "@/lib/types";
 
 type Check = {
   status: "checking" | "match" | "none" | "error";
@@ -31,6 +31,7 @@ export default function Booth() {
   const [refused, setRefused] = useState("");
   const [phonePassword, setPhonePassword] = useState("");
   const [ending, setEnding] = useState(false);
+  const [screen, setScreen] = useState<"set" | "setup">("set");
   const venueFocused = useRef(false);
   const refusedFocused = useRef(false);
 
@@ -202,60 +203,98 @@ export default function Booth() {
   }
 
   const idle = !show.nowPlaying && show.queue.length === 0 && show.pending.length === 0;
+  const blocked = show.blocked ?? [];
 
   return (
     <main className="booth" data-accent={show.settings.accent}>
       <header className="top">
         <div>
           <p className="wordmark">Setlist</p>
-          <h1>The booth</h1>
+          <h1>{screen === "set" ? show.settings.venueName : "Setup"}</h1>
         </div>
         <div className="links">
-          <button type="button" className="btn" onClick={() => void copy("overlay")}>
-            {copied === "overlay" ? "Copied" : "Copy overlay link"}
+          <button type="button" className={`btn ${screen === "set" ? "on" : ""}`} onClick={() => setScreen("set")}>
+            The set
           </button>
-          <button type="button" className="btn" onClick={() => void copy("request")} disabled={!show.links.request}>
-            {copied === "request" ? "Copied" : "Copy request link"}
-          </button>
-          <button type="button" className="btn" onClick={() => void copy("phone")} disabled={!show.links.phone}>
-            {copied === "phone" ? "Copied" : "Copy phone booth"}
+          <button type="button" className={`btn ${screen === "setup" ? "on" : ""}`} onClick={() => setScreen("setup")}>
+            Setup
           </button>
           <a className="btn" href="/history">
             Past nights
           </a>
         </div>
       </header>
-      <p className="hint request-hint">
-        {show.links.request
-          ? `Requests: ${show.links.request}`
-          : "This Mac has no network address yet, so phones cannot open requests."}
-      </p>
-      {show.links.phone ? (
-        <p className="hint request-hint">
-          Phone booth: {show.links.phone}
-          {phonePassword ? ` · password ${phonePassword}` : ""}
-          {phonePassword ? (
-            <button type="button" className="btn tiny" onClick={() => void rotatePassword()}>
-              New password
-            </button>
-          ) : null}
-        </p>
-      ) : null}
+      {error ? <p className="banner">{error}</p> : null}
 
-      <YouTube />
-      <Live />
+      {screen === "setup" ? (
+        <>
+          <section className="live-panel">
+            <div className="panel-head">
+              <h2>On the stream</h2>
+            </div>
+            <p className="hint">
+              Set YouTube to ultra low-latency before you go live. In OBS, put the webcam on the bottom. Add one browser
+              source on top at 1920×1080 and paste the overlay link. The card sits on the picture and the camera shows
+              through.
+            </p>
+            <div className="live-actions">
+              <button type="button" className="btn" onClick={() => void copy("overlay")}>
+                {copied === "overlay" ? "Copied" : "Copy overlay link"}
+              </button>
+              <button type="button" className="btn" onClick={() => void copy("request")} disabled={!show.links.request}>
+                {copied === "request" ? "Copied" : "Copy request link"}
+              </button>
+              <button type="button" className="btn" onClick={() => void copy("phone")} disabled={!show.links.phone}>
+                {copied === "phone" ? "Copied" : "Copy phone booth"}
+              </button>
+            </div>
+            <p className="hint">
+              {show.links.overlay ? `Overlay: ${show.links.overlay}` : "Overlay link is on this computer."}
+            </p>
+            <p className="hint">
+              {show.links.request
+                ? `Requests: ${show.links.request}`
+                : "This computer has no network address yet, so phones cannot open requests."}
+            </p>
+            {show.links.phone ? (
+              <p className="hint">
+                Phone booth: {show.links.phone}
+                {phonePassword ? ` · password ${phonePassword}` : ""}
+                {phonePassword ? (
+                  <button type="button" className="btn tiny" onClick={() => void rotatePassword()}>
+                    New password
+                  </button>
+                ) : null}
+              </p>
+            ) : null}
+          </section>
 
-      <div className="desk">
-        <section className="stage-column">
-          <div className="monitor">
-            <div className={`anchor ${show.settings.position}`}>
+          <section className="live-panel">
+            <div className="panel-head">
+              <h2>Another computer</h2>
+            </div>
+            <p className="hint">
+              Another streamer runs Setlist on their own computer. Their YouTube key, blocks, and nights stay on that
+              machine. They open Setup, paste their own key, and build the same OBS scene: webcam underneath, overlay
+              on top.
+            </p>
+          </section>
+
+          <YouTube />
+          <Live />
+
+          <div className="monitor" data-accent={show.settings.accent} data-skin={show.settings.skin}>
+            <div className={`anchor ${show.settings.skin === "paper" ? "paper" : show.settings.position}`}>
               <Mark show={{ ...show, logoUrl: show.logoStamp ? `/api/logo?v=${show.logoStamp}` : null }} />
             </div>
-            {!show.nowPlaying ? <p className="stage-idle">Clear until a song takes the stage.</p> : null}
+            {!show.nowPlaying ? <p className="stage-idle">The preview matches the overlay once a song is on stage.</p> : null}
           </div>
-        </section>
+        </>
+      ) : null}
 
-        <section className="stage-card">
+      {screen === "set" ? (
+        <>
+        <section className="stage-card gig-stage">
           <div className="panel-head">
             <h2>On stage</h2>
           </div>
@@ -289,12 +328,10 @@ export default function Booth() {
             </div>
           )}
         </section>
-      </div>
 
-      <p className="hint">
-        Paste the overlay link into one OBS browser source at 1920×1080. The name, colors, and logo stay on this booth
-        for the next gig. Play the audio in Serato or Spotify. Press N for the next track.
-      </p>
+        {blocked.length > 0 ? <BlockedPeople people={blocked} onUnblock={(name) => void act({ action: "unblock", name })} /> : null}
+
+        <p className="hint">Press N for the next song. Play the audio in Serato or Spotify.</p>
 
       <form
         className="adder"
@@ -345,8 +382,6 @@ export default function Booth() {
           </button>
         </div>
       </form>
-
-      {error ? <p className="banner">{error}</p> : null}
 
       <div className="lanes">
         <Lane title="Requests" count={show.pending.length} empty="Nothing waiting.">
@@ -439,7 +474,10 @@ export default function Booth() {
           ))}
         </Lane>
       </div>
+        </>
+      ) : null}
 
+      {screen === "setup" ? (
       <form
         className="settings"
         onSubmit={(event) => {
@@ -462,6 +500,17 @@ export default function Booth() {
             onChange={(event) => setVenue(event.target.value)}
           />
         </label>
+        <Choice
+          label="Look"
+          value={show.settings.skin}
+          options={[
+            ["warm", "Warm"],
+            ["paper", "Paper"],
+            ["club", "Club"],
+          ]}
+          onChange={(skin) => void act({ action: "settings", ...show.settings, skin })}
+        />
+        <p className="hint">Warm is the corner card. Paper is a white bar along the bottom. Club is a darker corner card.</p>
         <Choice
           label="Accent"
           value={show.settings.accent}
@@ -572,7 +621,34 @@ export default function Booth() {
           {ending ? "Save the night and clear the set" : "End night"}
         </button>
       </form>
+      ) : null}
     </main>
+  );
+}
+
+function BlockedPeople({
+  people,
+  onUnblock,
+}: {
+  people: { name: string; fbId: string | null; ytId: string | null }[];
+  onUnblock: (name: string) => void;
+}) {
+  return (
+    <div className="blocked">
+      <span>Blocked</span>
+      {people.map((person) => (
+        <button
+          key={`${person.name}-${person.fbId ?? ""}-${person.ytId ?? ""}`}
+          type="button"
+          className="btn tiny"
+          onClick={() => onUnblock(person.name)}
+        >
+          {person.name}
+          {person.fbId ? " · Facebook" : ""}
+          {person.ytId ? " · YouTube" : ""} · Unblock
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -628,7 +704,7 @@ function TrackRow({
   );
 }
 
-function Choice<T extends Accent | Position>({
+function Choice<T extends Accent | Position | Skin>({
   label,
   value,
   options,

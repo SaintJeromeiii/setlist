@@ -4,6 +4,8 @@ export type Accent = "amber" | "bone" | "oxblood";
 
 export type Position = "left" | "center" | "right";
 
+export type Skin = "warm" | "paper" | "club";
+
 export type TrackSource = "form" | "facebook" | "youtube" | "booth";
 
 export type Track = {
@@ -33,6 +35,7 @@ export type Settings = {
   venueName: string;
   accent: Accent;
   position: Position;
+  skin: Skin;
   showRequester: boolean;
   showUpNext: boolean;
   refusedWords: string;
@@ -56,6 +59,7 @@ export const defaultSettings: Settings = {
   venueName: "Setlist",
   accent: "amber",
   position: "left",
+  skin: "warm",
   showRequester: true,
   showUpNext: true,
   refusedWords: "",
