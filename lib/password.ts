@@ -1,8 +1,9 @@
 import { randomInt } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
+import { dataDir } from "./paths";
 
-const file = path.join(process.cwd(), "data", "phone-password");
+const file = path.join(dataDir(), "phone-password");
 
 const WORDS = [
   "amber",

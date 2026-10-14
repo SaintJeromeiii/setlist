@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { boothBrowserOrigin, isLoopbackHost } from "@/lib/host";
 
 const PAGES = new Set(["/overlay", "/booth", "/login", "/history", "/desk"]);
 
@@ -21,13 +22,16 @@ const APIS = new Set([
 export function middleware(request: NextRequest) {
   if (request.headers.get("x-setlist-peer") !== "public") return NextResponse.next();
   const path = request.nextUrl.pathname;
+  const host = request.headers.get("host") ?? request.nextUrl.host;
+  if ((path === "/" || path === "") && isLoopbackHost(host)) {
+    return NextResponse.redirect(boothBrowserOrigin());
+  }
   if (path === "/request" || path.startsWith("/request/") || PAGES.has(path) || APIS.has(path)) {
     return NextResponse.next();
   }
   if (path.startsWith("/api/")) {
     return NextResponse.json({ error: "Not available." }, { status: 404 });
   }
-  const host = request.headers.get("host") ?? request.nextUrl.host;
   const proto = request.headers.get("x-forwarded-proto") === "https" ? "https" : "http";
   return NextResponse.redirect(new URL(`${proto}://${host}/request`));
 }

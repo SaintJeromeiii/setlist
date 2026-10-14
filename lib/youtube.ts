@@ -3,8 +3,10 @@ import path from "path";
 import { parseSongComment } from "./comment";
 import { requestTrack } from "./show";
 import { updateShow } from "./store";
+import { dataDir } from "./paths";
+import { openPublicLive, pullPublicChat, type WebSession } from "./youtube-web";
 
-const file = path.join(process.cwd(), "data", "youtube.json");
+const file = path.join(dataDir(), "youtube.json");
 
 type YouTubeState = {
   apiKey: string;
@@ -18,11 +20,12 @@ type YouTubeState = {
   lastError: string;
   lastPollAt: number;
   waitMs: number;
+  continuation: string;
+  webKey: string;
+  clientVersion: string;
 };
 
 export type YouTubePublic = {
-  hasKey: boolean;
-  keyFromEnv: boolean;
   listening: boolean;
   title: string;
   channelTitle: string;
@@ -65,6 +68,9 @@ const empty = (): YouTubeState => ({
   lastError: "",
   lastPollAt: 0,
   waitMs: 12000,
+  continuation: "",
+  webKey: "",
+  clientVersion: "",
 });
 
 let chain: Promise<unknown> = Promise.resolve();
@@ -85,6 +91,9 @@ async function readYouTube(): Promise<YouTubeState> {
       ...empty(),
       ...parsed,
       seen: Array.isArray(parsed.seen) ? parsed.seen.filter((id) => typeof id === "string") : [],
+      continuation: typeof parsed.continuation === "string" ? parsed.continuation : "",
+      webKey: typeof parsed.webKey === "string" ? parsed.webKey : "",
+      clientVersion: typeof parsed.clientVersion === "string" ? parsed.clientVersion : "",
     };
   } catch {
     return empty();
@@ -101,17 +110,19 @@ function activeKey(state: YouTubeState): string {
 }
 
 function present(state: YouTubeState): YouTubePublic {
-  const envKey = Boolean(process.env.YOUTUBE_API_KEY?.trim());
   return {
-    hasKey: envKey || Boolean(state.apiKey),
-    keyFromEnv: envKey,
-    listening: Boolean(state.liveChatId),
+    listening: Boolean(state.liveChatId || state.continuation),
     title: state.title,
     channelTitle: state.channelTitle,
     videoId: state.videoId,
     lastError: state.lastError,
     lastPollAt: state.lastPollAt,
   };
+}
+
+function webSession(state: YouTubeState): WebSession | null {
+  if (!state.continuation || !state.webKey || !state.clientVersion) return null;
+  return { apiKey: state.webKey, clientVersion: state.clientVersion, continuation: state.continuation };
 }
 
 export function youtubeVideoId(input: string): string | null {
@@ -166,27 +177,40 @@ export function youtubeStatus(): Promise<YouTubePublic> {
   return locked(async () => present(await readYouTube()));
 }
 
-export function saveYouTubeKey(key: string): Promise<YouTubePublic> {
-  const trimmed = key.trim();
-  if (trimmed.length < 20 || trimmed.length > 200) return Promise.reject(new Error("That doesn't look like a YouTube API key."));
-  return locked(async () => {
-    const state = await readYouTube();
-    state.apiKey = trimmed;
-    state.lastError = "";
-    await writeYouTube(state);
-    return present(state);
-  });
-}
-
-export function listenToVideo(input: string): Promise<YouTubePublic> {
+export async function listenToVideo(input: string): Promise<YouTubePublic> {
   const videoId = youtubeVideoId(input);
   if (!videoId) {
-    return Promise.reject(new Error("Paste the watch link for this stream. YouTube Studio copies it from the live."));
+    throw new Error("Paste the watch link for this stream. YouTube Studio copies it from the live.");
   }
+  try {
+    const opened = await openPublicLive(videoId);
+    return locked(async () => {
+      const state = await readYouTube();
+      state.videoId = videoId;
+      state.liveChatId = "";
+      state.pageToken = "";
+      state.continuation = opened.continuation;
+      state.webKey = opened.apiKey;
+      state.clientVersion = opened.clientVersion;
+      state.title = opened.title;
+      state.channelTitle = opened.channelTitle;
+      state.connectedAt = Date.now();
+      state.seen = [];
+      state.lastError = "";
+      state.waitMs = 12000;
+      await writeYouTube(state);
+      return present(state);
+    });
+  } catch (webError) {
+    const key = activeKey(await locked(() => readYouTube()));
+    if (!key) throw webError instanceof Error ? webError : new Error("YouTube didn't answer.");
+    return listenWithKey(videoId, key);
+  }
+}
+
+function listenWithKey(videoId: string, key: string): Promise<YouTubePublic> {
   return locked(async () => {
     const state = await readYouTube();
-    const key = activeKey(state);
-    if (!key) throw new Error("Add the YouTube key first. It stays on this booth.");
     try {
       const payload = await google<{ items?: VideoItem[] }>(
         "videos",
@@ -198,6 +222,9 @@ export function listenToVideo(input: string): Promise<YouTubePublic> {
       if (!video || !liveChatId) throw new Error("That video doesn't have a live chat yet. Start the stream, then listen again.");
       state.videoId = videoId;
       state.liveChatId = liveChatId;
+      state.continuation = "";
+      state.webKey = "";
+      state.clientVersion = "";
       state.title = video.snippet?.title || "Live";
       state.channelTitle = video.snippet?.channelTitle || "";
       state.connectedAt = Date.now();
@@ -223,15 +250,10 @@ export function stopYouTube(): Promise<YouTubePublic> {
     state.title = "";
     state.channelTitle = "";
     state.pageToken = "";
+    state.continuation = "";
+    state.webKey = "";
+    state.clientVersion = "";
     state.lastError = "";
-    await writeYouTube(state);
-    return present(state);
-  });
-}
-
-export function disconnectYouTube(): Promise<YouTubePublic> {
-  return locked(async () => {
-    const state = empty();
     await writeYouTube(state);
     return present(state);
   });
@@ -260,6 +282,10 @@ export async function importYouTubeChat(): Promise<void> {
 
 async function importOnce(): Promise<void> {
   const state = await locked(() => readYouTube());
+  if (webSession(state)) {
+    await importWeb(state);
+    return;
+  }
   const key = activeKey(state);
   if (!key || !state.liveChatId) return;
   if (state.lastPollAt && Date.now() < state.lastPollAt + state.waitMs) return;
@@ -323,6 +349,67 @@ async function importOnce(): Promise<void> {
       if (message === "That live chat has ended.") {
         latest.liveChatId = "";
         latest.pageToken = "";
+      }
+      await writeYouTube(latest);
+    });
+  }
+}
+
+async function importWeb(state: YouTubeState): Promise<void> {
+  const session = webSession(state);
+  if (!session) return;
+  if (state.lastPollAt && Date.now() < state.lastPollAt + state.waitMs) return;
+  try {
+    const page = await pullPublicChat(session);
+    const seen = new Set(state.seen);
+    for (const line of page.lines) {
+      if (seen.has(line.id)) continue;
+      if (!line.timestampMs || line.timestampMs + 120_000 < state.connectedAt) {
+        seen.add(line.id);
+        continue;
+      }
+      const parsed = parseSongComment(line.text);
+      if (!parsed || !line.channelId) {
+        seen.add(line.id);
+        continue;
+      }
+      try {
+        await updateShow((show) =>
+          requestTrack(
+            show,
+            { title: parsed.title, artist: parsed.artist, requester: line.author },
+            { ytId: line.channelId, commentId: line.id, source: "youtube", skipTurn: true },
+          ),
+        );
+      } catch {
+        // A refusal still counts as heard, so the same chat line is not tried again.
+      }
+      seen.add(line.id);
+    }
+    await locked(async () => {
+      const latest = await readYouTube();
+      if (latest.videoId !== state.videoId || latest.continuation !== state.continuation) return;
+      latest.continuation = page.ended ? "" : page.continuation || latest.continuation;
+      latest.waitMs = page.waitMs;
+      latest.seen = [...seen].slice(-800);
+      latest.lastError = page.ended ? "That live chat has ended." : "";
+      latest.lastPollAt = Date.now();
+      if (page.ended) {
+        latest.webKey = "";
+        latest.clientVersion = "";
+      }
+      await writeYouTube(latest);
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "YouTube didn't answer.";
+    await locked(async () => {
+      const latest = await readYouTube();
+      latest.lastError = message;
+      latest.lastPollAt = Date.now();
+      if (message.startsWith("That live chat has ended.")) {
+        latest.continuation = "";
+        latest.webKey = "";
+        latest.clientVersion = "";
       }
       await writeYouTube(latest);
     });

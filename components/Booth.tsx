@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Mark from "@/components/Mark";
 import Live from "@/components/Live";
+import StartHere from "@/components/StartHere";
 import YouTube from "@/components/YouTube";
 import { boothHeaders, useShow } from "@/components/use-show";
 import { money } from "@/lib/money";
@@ -31,7 +32,8 @@ export default function Booth() {
   const [refused, setRefused] = useState("");
   const [phonePassword, setPhonePassword] = useState("");
   const [ending, setEnding] = useState(false);
-  const [screen, setScreen] = useState<"set" | "setup">("set");
+  const [screen, setScreen] = useState<"start" | "set" | "setup">("start");
+  const picked = useRef(false);
   const venueFocused = useRef(false);
   const refusedFocused = useRef(false);
 
@@ -43,6 +45,12 @@ export default function Booth() {
   useEffect(() => {
     if (!show || refusedFocused.current) return;
     setRefused(show.settings.refusedWords ?? "");
+  }, [show]);
+
+  useEffect(() => {
+    if (!show || picked.current) return;
+    picked.current = true;
+    if (show.nowPlaying || show.queue.length > 0 || show.pending.length > 0) setScreen("set");
   }, [show]);
 
   useEffect(() => {
@@ -210,9 +218,12 @@ export default function Booth() {
       <header className="top">
         <div>
           <p className="wordmark">Setlist</p>
-          <h1>{screen === "set" ? show.settings.venueName : "Setup"}</h1>
+          <h1>{screen === "set" ? show.settings.venueName : screen === "setup" ? "Setup" : "Start here"}</h1>
         </div>
         <div className="links">
+          <button type="button" className={`btn ${screen === "start" ? "on" : ""}`} onClick={() => setScreen("start")}>
+            Start here
+          </button>
           <button type="button" className={`btn ${screen === "set" ? "on" : ""}`} onClick={() => setScreen("set")}>
             The set
           </button>
@@ -225,6 +236,15 @@ export default function Booth() {
         </div>
       </header>
       {error ? <p className="banner">{error}</p> : null}
+
+      {screen === "start" ? (
+        <StartHere
+          links={show.links}
+          copied={copied}
+          onCopy={(kind) => void copy(kind)}
+          onSetup={() => setScreen("setup")}
+        />
+      ) : null}
 
       {screen === "setup" ? (
         <>
@@ -274,9 +294,8 @@ export default function Booth() {
               <h2>Another computer</h2>
             </div>
             <p className="hint">
-              Another streamer runs Setlist on their own computer. Their YouTube key, blocks, and nights stay on that
-              machine. They open Setup, paste their own key, and build the same OBS scene: webcam underneath, overlay
-              on top.
+              Another streamer runs Setlist on their own computer. Their blocks and nights stay on that machine.
+              They open Setup, paste the live URL, and build the same OBS scene: webcam underneath, overlay on top.
             </p>
           </section>
 

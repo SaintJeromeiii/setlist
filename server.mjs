@@ -1,10 +1,12 @@
 import { createServer } from "node:http";
 import os from "node:os";
 import next from "next";
+import { boothPageUrl, openBooth, shouldOpenBooth, startupLines } from "./lib/booth-open.mjs";
 
 const dev = process.env.NODE_ENV !== "production";
 const boothPort = Number(process.env.PORT || 3847);
 const publicPort = Number(process.env.SETLIST_PUBLIC_PORT || 3848);
+const boothHost = process.env.SETLIST_BOOTH_HOST || "127.0.0.1";
 
 const booth = createServer();
 const app = next({
@@ -45,7 +47,7 @@ booth.on("request", peer("booth"));
 const publicServer = createServer(peer("public"));
 
 await new Promise((resolve) => {
-  booth.listen(boothPort, "127.0.0.1", resolve);
+  booth.listen(boothPort, boothHost, resolve);
 });
 await new Promise((resolve) => {
   publicServer.listen(publicPort, "0.0.0.0", resolve);
@@ -55,7 +57,7 @@ const configured = process.env.SETLIST_PUBLIC_URL?.trim().replace(/\/$/, "");
 const lan = lanIPv4();
 const origin = configured || (lan ? `http://${lan}:${publicPort}` : "");
 
-console.log(`Booth     http://127.0.0.1:${boothPort}`);
-console.log(origin ? `Overlay   ${origin}/overlay` : `Overlay   http://127.0.0.1:${boothPort}/overlay`);
-console.log(origin ? `Requests  ${origin}/request` : "Requests  unavailable until this Mac has a network address");
-console.log(origin ? `Phone     ${origin}/booth` : "Phone     unavailable until this Mac has a network address");
+const desktop = process.env.SETLIST_DESKTOP === "1";
+const opened = shouldOpenBooth();
+if (opened) openBooth(boothPageUrl(boothPort));
+for (const line of startupLines({ port: boothPort, origin, opened, desktop })) console.log(line);

@@ -1,8 +1,9 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { dataDir } from "./paths";
 import type { Show, Track } from "./types";
 
-const dir = path.join(process.cwd(), "data", "nights");
+const dir = path.join(dataDir(), "nights");
 
 export type NightSong = {
   title: string;

@@ -1,8 +1,9 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { dataDir } from "./paths";
 import { defaultSettings, emptyShow, type Block, type Show, type Track, type TrackSource } from "./types";
 
-const file = path.join(process.cwd(), "data", "show.json");
+const file = path.join(dataDir(), "show.json");
 
 let chain: Promise<unknown> = Promise.resolve();
 

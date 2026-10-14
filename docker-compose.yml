@@ -1,0 +1,11 @@
+services:
+  setlist:
+    build: .
+    ports:
+      - "127.0.0.1:3847:3847"
+      - "3848:3848"
+    volumes:
+      - setlist-data:/app/data
+
+volumes:
+  setlist-data:

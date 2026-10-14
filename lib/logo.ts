@@ -1,7 +1,9 @@
 import { promises as fs, readFileSync, statSync } from "fs";
 import path from "path";
 
-const dir = path.join(process.cwd(), "data");
+import { dataDir } from "./paths";
+
+const dir = dataDir();
 const kindFile = path.join(dir, "logo.kind");
 
 const KINDS = {

@@ -3,8 +3,9 @@ import { requestTrack } from "./show";
 import { updateShow } from "./store";
 import { promises as fs } from "fs";
 import path from "path";
+import { dataDir } from "./paths";
 
-const file = path.join(process.cwd(), "data", "facebook.json");
+const file = path.join(dataDir(), "facebook.json");
 
 type FacebookState = {
   pageToken: string;
