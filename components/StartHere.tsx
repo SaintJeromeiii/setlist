@@ -16,10 +16,10 @@ export default function StartHere({
       <li>
         <span className="num">1</span>
         <div>
-          <h2>Open the booth on this computer</h2>
+          <h2>Keep this tab open</h2>
           <p>
-            This page is the booth. Keep it open in the browser on the computer that runs the show. Listeners never use
-            this page.
+            Setlist opens this page when you start it. This is the booth. Bookmark it so you can come back if you close
+            the tab, or start Setlist again. Listeners never use this page.
           </p>
         </div>
       </li>

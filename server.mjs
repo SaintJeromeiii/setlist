@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import os from "node:os";
 import next from "next";
+import { boothPageUrl, openBooth, shouldOpenBooth, startupLines } from "./lib/booth-open.mjs";
 
 const dev = process.env.NODE_ENV !== "production";
 const boothPort = Number(process.env.PORT || 3847);
@@ -56,7 +57,6 @@ const configured = process.env.SETLIST_PUBLIC_URL?.trim().replace(/\/$/, "");
 const lan = lanIPv4();
 const origin = configured || (lan ? `http://${lan}:${publicPort}` : "");
 
-console.log(`Booth     http://127.0.0.1:${boothPort}`);
-console.log(origin ? `Overlay   ${origin}/overlay` : `Overlay   http://127.0.0.1:${boothPort}/overlay`);
-console.log(origin ? `Requests  ${origin}/request` : "Requests  unavailable until this Mac has a network address");
-console.log(origin ? `Phone     ${origin}/booth` : "Phone     unavailable until this Mac has a network address");
+const opened = shouldOpenBooth();
+if (opened) openBooth(boothPageUrl(boothPort));
+for (const line of startupLines({ port: boothPort, origin, opened })) console.log(line);
