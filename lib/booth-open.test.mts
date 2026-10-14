@@ -6,6 +6,7 @@ assert.equal(shouldOpenBooth({}), true);
 assert.equal(shouldOpenBooth({ SETLIST_OPEN_BROWSER: "0" }), false);
 assert.equal(shouldOpenBooth({}, true), false);
 assert.equal(shouldOpenBooth({ SETLIST_BOOTH_HOST: "0.0.0.0" }), false);
+assert.equal(shouldOpenBooth({ SETLIST_DESKTOP: "1" }), false);
 
 assert.deepEqual(browserCommand("darwin", "http://127.0.0.1:3847"), {
   command: "open",
@@ -35,6 +36,9 @@ const ready = startupLines({ port: 3847, origin: "http://192.168.1.20:3848", ope
 assert.equal(ready[0], "Setlist opened the booth in your browser.");
 assert.match(ready[1], /127\.0\.0\.1:3847/);
 assert.match(ready[3], /192\.168\.1\.20:3848\/request/);
+
+const desktop = startupLines({ port: 3847, origin: "http://192.168.1.20:3848", opened: false, desktop: true });
+assert.equal(desktop[0], "Setlist is open.");
 
 const docker = startupLines({ port: 3847, origin: "", opened: false });
 assert.match(docker[0], /Open http:\/\/127\.0\.0\.1:3847/);

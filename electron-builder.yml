@@ -1,0 +1,23 @@
+appId: com.setlist.booth
+productName: Setlist
+asar: false
+directories:
+  output: dist
+files:
+  - "**/*"
+  - "!dist/**"
+  - "!data/**"
+  - "!**/*.test.mts"
+  - "!.git/**"
+mac:
+  category: public.app-category.music
+  identity: null
+  target:
+    - zip
+win:
+  target:
+    - zip
+linux:
+  target:
+    - AppImage
+  category: AudioVideo

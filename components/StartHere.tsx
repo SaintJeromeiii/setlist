@@ -16,10 +16,9 @@ export default function StartHere({
       <li>
         <span className="num">1</span>
         <div>
-          <h2>Keep this tab open</h2>
+          <h2>Keep this window open</h2>
           <p>
-            Setlist opens this page when you start it. This is the booth. Bookmark it so you can come back if you close
-            the tab, or start Setlist again. Listeners never use this page.
+            This is the booth. Leave Setlist open while you play. Listeners never use this screen.
           </p>
         </div>
       </li>

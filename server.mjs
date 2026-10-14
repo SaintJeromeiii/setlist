@@ -57,6 +57,7 @@ const configured = process.env.SETLIST_PUBLIC_URL?.trim().replace(/\/$/, "");
 const lan = lanIPv4();
 const origin = configured || (lan ? `http://${lan}:${publicPort}` : "");
 
+const desktop = process.env.SETLIST_DESKTOP === "1";
 const opened = shouldOpenBooth();
 if (opened) openBooth(boothPageUrl(boothPort));
-for (const line of startupLines({ port: boothPort, origin, opened })) console.log(line);
+for (const line of startupLines({ port: boothPort, origin, opened, desktop })) console.log(line);

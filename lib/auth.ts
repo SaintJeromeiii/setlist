@@ -1,9 +1,10 @@
 import { randomBytes, timingSafeEqual } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
+import { dataDir } from "./paths";
 import { sessionAuthorized } from "./session";
 
-const file = path.join(process.cwd(), "data", "booth.key");
+const file = path.join(dataDir(), "booth.key");
 
 let cached: string | null = null;
 

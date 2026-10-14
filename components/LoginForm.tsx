@@ -32,7 +32,7 @@ export default function LoginForm() {
       <form className="request-card" onSubmit={(event) => void submit(event)}>
         <p className="wordmark">Setlist</p>
         <h1>Open the booth</h1>
-        <p className="lede">The password is on the booth at the laptop.</p>
+        <p className="lede">The password is in Setup, on the computer running Setlist.</p>
         <label>
           <span>Password</span>
           <input

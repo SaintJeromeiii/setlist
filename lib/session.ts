@@ -2,7 +2,9 @@ import { randomBytes, timingSafeEqual } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
 
-const file = path.join(process.cwd(), "data", "sessions.json");
+import { dataDir } from "./paths";
+
+const file = path.join(dataDir(), "sessions.json");
 const COOKIE = "setlist_phone";
 
 let chain: Promise<unknown> = Promise.resolve();

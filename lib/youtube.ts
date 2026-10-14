@@ -3,9 +3,10 @@ import path from "path";
 import { parseSongComment } from "./comment";
 import { requestTrack } from "./show";
 import { updateShow } from "./store";
+import { dataDir } from "./paths";
 import { openPublicLive, pullPublicChat, type WebSession } from "./youtube-web";
 
-const file = path.join(process.cwd(), "data", "youtube.json");
+const file = path.join(dataDir(), "youtube.json");
 
 type YouTubeState = {
   apiKey: string;
